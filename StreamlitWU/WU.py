@@ -8,7 +8,7 @@ st.set_page_config(page_title="WU Directory", layout="wide")
 
 st.title('Directory at Westminster University')
 st.write("This is an enhanced alternative to the employee [directory](https://westminsteru.edu/campus-directory/index.html) at Westminster University." )
-data = pd.read_csv('WU_directory.csv') 
+data = pd.read_csv('./WU_directory.csv') 
 
 filtered_data = data.copy()
 
