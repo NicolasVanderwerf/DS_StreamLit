@@ -1,14 +1,27 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt 
 import re 
+import plotly.express as px
 
 st.set_page_config(page_title="Cocktail List", layout="wide")
 
 st.title('Cocktail List')
 data = pd.read_csv('./recipes.csv') 
 data = data.dropna(subset=['story']).query('story != ""')
+def count_steps(steps_str):
+    try:
+        # Clean up the string and convert to a more readable format
+        steps_str = steps_str.replace("'", "\"")  # Replace single quotes with double quotes
+        import json
+        steps_list = json.loads(steps_str)
+        return len(steps_list)
+    except:
+        # Fallback if JSON parsing fails
+        steps_raw = steps_str.strip('[]').split("', '")
+        return len([step for step in steps_raw if step.strip("'")])
+
+data['step_count'] = data['steps'].apply(count_steps)
 
 
 filtered_data = data.copy()
@@ -36,10 +49,6 @@ reviewCountFilter = st.sidebar.slider(
     0, 2000
 )
 
-timeFilter = st.sidebar.slider(
-    "Select total cook time (mins)",
-    0, 2000
-)
 
 # Apply department filter
 if reviewCountFilter != 0:
@@ -70,6 +79,8 @@ event = st.dataframe(
     column_config={"url": st.column_config.LinkColumn(display_text="Link")}
 )
 
+st.write("Cocktail Count: " + str(len(filtered_data)))
+
 if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
     recipe = filtered_data.iloc[selected_row]
@@ -85,32 +96,98 @@ if len(event.selection['rows']):
     with meta_col2:
         st.write("**Review Count:** " + str(recipe['review_count']))
     
-    # Display story in a highlighted box
-    
-    # Display ingredients in a clean list
+    # Display ingredients in a clean, formatted table
     st.subheader("Ingredients")
-    ingredients_list = recipe['ingredients'].split('\n')
-    for ingredient in ingredients_list:
-        st.write("• " + ingredient.strip())
     
-    # Display steps in a numbered list
+    # Parse the ingredients string into a more usable format
+    # The string looks like a list of dictionaries
+    ingredients_str = recipe['ingredients']
+    
+    # Clean up the string and convert to a more readable format
+    ingredients_str = ingredients_str.replace("'", "\"")  # Replace single quotes with double quotes
+    
+    try:
+        import json
+        ingredients_list = json.loads(ingredients_str)
+        
+        # Create a clean table for ingredients
+        for item in ingredients_list:
+            quantity = item.get('quantity', '')
+            unit = item.get('unit', '')
+            ingredient = item.get('ingredient', '')
+            note = item.get('note', '')
+            
+            # Format the ingredient line
+            ingredient_line = f"• {quantity} {unit} {ingredient}"
+            if note:
+                ingredient_line += f" ({note})"
+            
+            st.write(ingredient_line)
+    except:
+        # Fallback if JSON parsing fails
+        st.write(recipe['ingredients'])
+    
+    # Display steps in a numbered list with better formatting
     st.subheader("Instructions")
-    steps_list = recipe['steps'].split('\n')
-    for i, step in enumerate(steps_list, 1):
-        if step.strip():  # Only display non-empty steps
-            st.write(f"{i}. {step.strip()}")
+    
+    # Parse the steps string into a list
+    steps_str = recipe['steps']
+    steps_str = steps_str.replace("'", "\"")  # Replace single quotes with double quotes
+    
+    try:
+        steps_list = json.loads(steps_str)
+        for i, step in enumerate(steps_list, 1):
+            if step.strip():  # Only display non-empty steps
+                st.write(f"{i}. {step.strip()}")
+    except:
+        # Fallback if JSON parsing fails
+        steps_raw = recipe['steps'].strip('[]').split("', '")
+        for i, step in enumerate(steps_raw, 1):
+            clean_step = step.strip("'")
+            if clean_step:
+                st.write(f"{i}. {clean_step}")
 
+    # Display story in a highlighted box
     st.info("**Story Behind the Drink**\n" + recipe['story'])
 
-fig, ax = plt.subplots(figsize=(6,4))
-ax.hist(filtered_data['review_count'])
-ax.set_title('Distribution of reviews')
-ax.set_xlabel('Reviews')
-ax.set_ylabel('Frequency')
-
-# Display the plot using Streamlit
-# st.toast(calorieFilter)
-# st.pyplot(fig, use_container_width=True)
-
-plotRow = st.columns(3)
-plotRow[0].container(height=300).pyplot(fig, use_container_width=True)
+else:
+    st.subheader("Cocktail Insights")
+    
+    # Create two columns for the charts
+    chart_col1, chart_col2 = st.columns(2)
+    
+    with chart_col1:
+        # Chart 1: Distribution of cocktails by primary alcohol
+        alcohol_counts = filtered_data['primary_alcohol'].value_counts().reset_index()
+        alcohol_counts.columns = ['Alcohol Type', 'Count']
+        
+        fig1 = px.bar(
+            alcohol_counts, 
+            x='Alcohol Type', 
+            y='Count',
+            title='Cocktails by Primary Alcohol',
+            color='Count',
+            color_continuous_scale='Viridis'
+        )
+        fig1.update_layout(xaxis_title='Primary Alcohol', yaxis_title='Number of Cocktails')
+        st.plotly_chart(fig1, use_container_width=True)
+    
+    with chart_col2:
+        # Chart 2: Scatter plot of review count vs. number of steps (complexity)
+        # First, extract the number of steps for each recipe using a more robust method
+        
+        fig2 = px.scatter(
+            filtered_data, 
+            x='step_count', 
+            y='review_count',
+            color='primary_alcohol',
+            size='review_count',
+            hover_data=['title'],
+            title='Cocktail Complexity vs. Popularity',
+            labels={
+                'step_count': 'Number of Steps (Complexity)',
+                'review_count': 'Number of Reviews (Popularity)'
+            }
+        )
+        fig2.update_layout(legend_title_text='Primary Alcohol')
+        st.plotly_chart(fig2, use_container_width=True)
