@@ -71,7 +71,7 @@ event = st.dataframe(
     column_config={"url": st.column_config.LinkColumn(display_text="Link")}
 )
 
-st.write("Cocktail Count: " + str(len(filtered_data)))
+st.write("Cocktail Count: ", str(len(filtered_data)))
 
 if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
@@ -81,10 +81,10 @@ if len(event.selection['rows']):
     
     meta_col1, meta_col2 = st.columns(2)
     with meta_col1:
-        st.write("**Author:** " + recipe['author'])
-        st.write("**Primary Alcohol:** " + recipe['primary_alcohol'])
+        st.write("**Author:** ", recipe['author'])
+        st.write("**Primary Alcohol:**", recipe['primary_alcohol'])
     with meta_col2:
-        st.write("**Review Count:** " + str(recipe['review_count']))
+        st.write("**Review Count:** ", str(recipe['review_count']))
     
     st.subheader("Ingredients")
     
@@ -127,7 +127,7 @@ if len(event.selection['rows']):
             if clean_step:
                 st.write(f"{i}. {clean_step}")
 
-    st.info("**Story Behind the Drink**\n" + recipe['story'])
+    st.info("**Story Behind the Drink**\n", recipe['story'])
 
 else:
     st.subheader("Cocktail Insights")
