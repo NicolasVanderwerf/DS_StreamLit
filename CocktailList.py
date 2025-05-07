@@ -11,13 +11,11 @@ data = pd.read_csv('./recipes.csv')
 data = data.dropna(subset=['story']).query('story != ""')
 def count_steps(steps_str):
     try:
-        # Clean up the string and convert to a more readable format
-        steps_str = steps_str.replace("'", "\"")  # Replace single quotes with double quotes
+        steps_str = steps_str.replace("'", "\"")
         import json
         steps_list = json.loads(steps_str)
         return len(steps_list)
     except:
-        # Fallback if JSON parsing fails
         steps_raw = steps_str.strip('[]').split("', '")
         return len([step for step in steps_raw if step.strip("'")])
 
@@ -28,7 +26,6 @@ filtered_data = data.copy()
 
 st.sidebar.title("Filters")
 
-# department = st.selectbox(label = 'Choose one department from below:', options = department_list)
 name = st.sidebar.text_input("Enter Name", "")
 use_regex = st.sidebar.checkbox('Use Regex Search', value=False)
 col1, col2, col3, col4 = st.columns([0.2,0.2,0.2,0.4])
@@ -43,19 +40,14 @@ auth_list.insert(0, 'ALL')
 
 author = st.sidebar.selectbox(label = 'Choose a Author:', options = auth_list)
 
-# calorieFilter = 0
+
 reviewCountFilter = st.sidebar.slider(
     "Select a min number of reviews",
     0, 2000
 )
 
-
-# Apply department filter
 if reviewCountFilter != 0:
     filtered_data = filtered_data[filtered_data['review_count'] > reviewCountFilter]
-
-# if timeFilter!= 0:
-#     filtered_data = filtered_data[filtered_data['Total Minutes'] < timeFilter]
 
 if prim_alc != 'ALL':
     filtered_data = filtered_data[filtered_data['primary_alcohol'] == prim_alc]
@@ -85,10 +77,8 @@ if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
     recipe = filtered_data.iloc[selected_row]
     
-    # Display title in large format
     st.header(recipe['title'])
     
-    # Create columns for metadata
     meta_col1, meta_col2 = st.columns(2)
     with meta_col1:
         st.write("**Author:** " + recipe['author'])
@@ -96,68 +86,55 @@ if len(event.selection['rows']):
     with meta_col2:
         st.write("**Review Count:** " + str(recipe['review_count']))
     
-    # Display ingredients in a clean, formatted table
     st.subheader("Ingredients")
     
-    # Parse the ingredients string into a more usable format
-    # The string looks like a list of dictionaries
     ingredients_str = recipe['ingredients']
     
-    # Clean up the string and convert to a more readable format
-    ingredients_str = ingredients_str.replace("'", "\"")  # Replace single quotes with double quotes
+    ingredients_str = ingredients_str.replace("'", "\"")
     
     try:
         import json
         ingredients_list = json.loads(ingredients_str)
         
-        # Create a clean table for ingredients
         for item in ingredients_list:
             quantity = item.get('quantity', '')
             unit = item.get('unit', '')
             ingredient = item.get('ingredient', '')
             note = item.get('note', '')
             
-            # Format the ingredient line
             ingredient_line = f"• {quantity} {unit} {ingredient}"
             if note:
                 ingredient_line += f" ({note})"
             
             st.write(ingredient_line)
     except:
-        # Fallback if JSON parsing fails
         st.write(recipe['ingredients'])
     
-    # Display steps in a numbered list with better formatting
     st.subheader("Instructions")
     
-    # Parse the steps string into a list
     steps_str = recipe['steps']
-    steps_str = steps_str.replace("'", "\"")  # Replace single quotes with double quotes
+    steps_str = steps_str.replace("'", "\"")
     
     try:
         steps_list = json.loads(steps_str)
         for i, step in enumerate(steps_list, 1):
-            if step.strip():  # Only display non-empty steps
+            if step.strip():
                 st.write(f"{i}. {step.strip()}")
     except:
-        # Fallback if JSON parsing fails
         steps_raw = recipe['steps'].strip('[]').split("', '")
         for i, step in enumerate(steps_raw, 1):
             clean_step = step.strip("'")
             if clean_step:
                 st.write(f"{i}. {clean_step}")
 
-    # Display story in a highlighted box
     st.info("**Story Behind the Drink**\n" + recipe['story'])
 
 else:
     st.subheader("Cocktail Insights")
     
-    # Create two columns for the charts
     chart_col1, chart_col2 = st.columns(2)
     
     with chart_col1:
-        # Chart 1: Distribution of cocktails by primary alcohol
         alcohol_counts = filtered_data['primary_alcohol'].value_counts().reset_index()
         alcohol_counts.columns = ['Alcohol Type', 'Count']
         
@@ -173,9 +150,6 @@ else:
         st.plotly_chart(fig1, use_container_width=True)
     
     with chart_col2:
-        # Chart 2: Scatter plot of review count vs. number of steps (complexity)
-        # First, extract the number of steps for each recipe using a more robust method
-        
         fig2 = px.scatter(
             filtered_data, 
             x='step_count', 
